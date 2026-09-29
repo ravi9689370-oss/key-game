@@ -208,6 +208,46 @@
             color: #feca57;
             margin: 20px 0;
         }
+
+        .keypad {
+            display: none;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            max-width: 420px;
+            margin: 25px auto 0;
+        }
+
+        .keypad.show {
+            display: grid;
+        }
+
+        .keypad button {
+            padding: 12px 0;
+            font-size: 1.1em;
+            font-weight: bold;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.15s;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .keypad button:active {
+            background: #48dbfb;
+            transform: scale(0.92);
+        }
+
+        .keypad button.hit {
+            background: #2ecc71;
+        }
+
+        .keypad button.miss {
+            background: #e74c3c;
+        }
     </style>
 </head>
 <body>
@@ -237,6 +277,7 @@
             <div class="message" id="message">Press START to play!</div>
             <div class="key-history" id="keyHistory"></div>
             <button class="start-btn" id="startBtn" onclick="startGame()">START GAME</button>
+            <div class="keypad" id="keypad"></div>
         </div>
 
         <div class="game-over" id="gameOver">
@@ -247,7 +288,7 @@
         </div>
 
         <div class="instructions">
-            <p>Jo key screen pe dikh rahi hai, use keyboard pe press karo!</p>
+            <p>Jo key screen pe dikh rahi hai, use press karo — keyboard ya neeche ke buttons!</p>
             <p>Fast press = More points | Wrong key = Lose life</p>
         </div>
     </div>
@@ -330,6 +371,7 @@
 
             gameArea.style.display = 'block';
             gameOverEl.classList.remove('show');
+            keypadEl.classList.add('show');
             startBtn.disabled = true;
             startBtn.textContent = 'GAME RUNNING...';
 
@@ -360,18 +402,28 @@
             
             gameArea.style.display = 'none';
             gameOverEl.classList.add('show');
+            keypadEl.classList.remove('show');
             finalScoreEl.textContent = score;
             
             startBtn.disabled = false;
             startBtn.textContent = 'START GAME';
         }
 
-        function handleKeyPress(e) {
+        // Build on-screen keypad (for mobile/touch devices)
+        const keypadEl = document.getElementById('keypad');
+        function buildKeypad() {
+            keypadEl.innerHTML = keys.map(k =>
+                `<button type="button" data-key="${k}">${k}</button>`
+            ).join('');
+        }
+        buildKeypad();
+
+        // Unified key entry: works for both physical keyboard and on-screen taps
+        function pressKey(pressedKey) {
             if (!gameRunning) return;
 
-            const pressedKey = e.key.toUpperCase();
-            
-            // Only accept single character keys
+            pressedKey = pressedKey.toUpperCase();
+
             if (pressedKey.length !== 1 || !keys.includes(pressedKey)) return;
 
             totalKeys++;
@@ -380,16 +432,17 @@
                 // Correct key
                 correctKeys++;
                 combo++;
-                
+
                 // Calculate score based on combo and level
                 const basePoints = 10;
                 const comboBonus = Math.min(combo * 2, 20);
                 const levelBonus = level * 5;
                 const points = basePoints + comboBonus + levelBonus;
-                
+
                 score += points;
                 showMessage(`+${points} points!`, 'success');
                 addToHistory(pressedKey, true);
+                flashKeypadKey(pressedKey, true);
                 nextKey();
             } else {
                 // Wrong key
@@ -397,7 +450,8 @@
                 lives--;
                 showMessage('Wrong key! -1 life', 'error');
                 addToHistory(pressedKey, false);
-                
+                flashKeypadKey(pressedKey, false);
+
                 if (lives <= 0) {
                     endGame();
                 }
@@ -406,8 +460,21 @@
             updateDisplay();
         }
 
-        // Event listener for key presses
-        document.addEventListener('keydown', handleKeyPress);
+        function flashKeypadKey(key, correct) {
+            const btn = keypadEl.querySelector(`button[data-key="${key}"]`);
+            if (!btn) return;
+            btn.classList.add(correct ? 'hit' : 'miss');
+            setTimeout(() => btn.classList.remove('hit', 'miss'), 250);
+        }
+
+        // Event listener for physical key presses
+        document.addEventListener('keydown', (e) => pressKey(e.key));
+
+        // On-screen keypad taps
+        keypadEl.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-key]');
+            if (btn) pressKey(btn.dataset.key);
+        });
 
         // Prevent default for game keys
         document.addEventListener('keydown', (e) => {
