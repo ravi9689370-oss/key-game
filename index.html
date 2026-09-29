@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Key Master - Key Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            overflow: hidden;
+        }
+
+        .game-container {
+            text-align: center;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradient 3s ease infinite;
+            background-size: 200% 200%;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .stats {
+            display: flex;
+            gap: 30px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px 25px;
+            border-radius: 10px;
+            min-width: 100px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #48dbfb;
+        }
+
+        .target-key {
+            font-size: 8em;
+            margin: 30px 0;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            display: inline-block;
+            min-width: 200px;
+            border: 3px solid #48dbfb;
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(72, 219, 251, 0.3); }
+            50% { transform: scale(1.05); box-shadow: 0 0 40px rgba(72, 219, 251, 0.6); }
+        }
+
+        .message {
+            font-size: 1.5em;
+            margin: 20px 0;
+            min-height: 40px;
+            transition: all 0.3s;
+        }
+
+        .message.success {
+            color: #2ecc71;
+            animation: bounce 0.5s;
+        }
+
+        .message.error {
+            color: #e74c3c;
+            animation: shake 0.5s;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .start-btn {
+            padding: 15px 40px;
+            font-size: 1.3em;
+            background: linear-gradient(45deg, #48dbfb, #0abde3);
+            border: none;
+            border-radius: 30px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+
+        .start-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(72, 219, 251, 0.5);
+        }
+
+        .start-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .instructions {
+            margin-top: 20px;
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        .combo {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            font-size: 2em;
+            color: #feca57;
+            font-weight: bold;
+        }
+
+        .level-indicator {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            font-size: 1.2em;
+            color: #ff9ff3;
+        }
+
+        .key-history {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 400px;
+        }
+
+        .key-item {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .key-item.correct {
+            background: #2ecc71;
+        }
+
+        .key-item.wrong {
+            background: #e74c3c;
+        }
+
+        .game-over {
+            display: none;
+        }
+
+        .game-over.show {
+            display: block;
+        }
+
+        .final-score {
+            font-size: 4em;
+            color: #feca57;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="level-indicator">Level: <span id="level">1</span></div>
+    <div class="combo">Combo: <span id="combo">0</span>x</div>
+
+    <div class="game-container">
+        <h1>🎮 Key Master</h1>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-label">Score</div>
+                <div class="stat-value" id="score">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Time</div>
+                <div class="stat-value" id="timer">30</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Lives</div>
+                <div class="stat-value" id="lives">❤️❤️❤️</div>
+            </div>
+        </div>
+
+        <div id="gameArea">
+            <div class="target-key" id="targetKey">?</div>
+            <div class="message" id="message">Press START to play!</div>
+            <div class="key-history" id="keyHistory"></div>
+            <button class="start-btn" id="startBtn" onclick="startGame()">START GAME</button>
+        </div>
+
+        <div class="game-over" id="gameOver">
+            <h2>Game Over!</h2>
+            <div class="final-score" id="finalScore">0</div>
+            <p>Great job! Try again?</p>
+            <button class="start-btn" onclick="startGame()">PLAY AGAIN</button>
+        </div>
+
+        <div class="instructions">
+            <p>Jo key screen pe dikh rahi hai, use keyboard pe press karo!</p>
+            <p>Fast press = More points | Wrong key = Lose life</p>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let score = 0;
+        let lives = 3;
+        let timeLeft = 30;
+        let level = 1;
+        let combo = 0;
+        let gameRunning = false;
+        let timerInterval = null;
+        let currentKey = '';
+        let keyHistory = [];
+        let totalKeys = 0;
+        let correctKeys = 0;
+
+        // Available keys
+        const keys = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'.split('');
+
+        // DOM Elements
+        const targetKeyEl = document.getElementById('targetKey');
+        const messageEl = document.getElementById('message');
+        const scoreEl = document.getElementById('score');
+        const timerEl = document.getElementById('timer');
+        const livesEl = document.getElementById('lives');
+        const levelEl = document.getElementById('level');
+        const comboEl = document.getElementById('combo');
+        const startBtn = document.getElementById('startBtn');
+        const gameArea = document.getElementById('gameArea');
+        const gameOverEl = document.getElementById('gameOver');
+        const finalScoreEl = document.getElementById('finalScore');
+        const keyHistoryEl = document.getElementById('keyHistory');
+
+        function getRandomKey() {
+            return keys[Math.floor(Math.random() * keys.length)];
+        }
+
+        function updateDisplay() {
+            scoreEl.textContent = score;
+            timerEl.textContent = timeLeft;
+            livesEl.textContent = '❤️'.repeat(lives) + '🖤'.repeat(3 - lives);
+            levelEl.textContent = level;
+            comboEl.textContent = combo;
+        }
+
+        function showMessage(text, type) {
+            messageEl.textContent = text;
+            messageEl.className = 'message ' + type;
+            setTimeout(() => {
+                messageEl.className = 'message';
+            }, 1000);
+        }
+
+        function addToHistory(key, correct) {
+            keyHistory.push({ key, correct });
+            if (keyHistory.length > 10) keyHistory.shift();
+            
+            keyHistoryEl.innerHTML = keyHistory.map(item => 
+                `<div class="key-item ${item.correct ? 'correct' : 'wrong'}">${item.key}</div>`
+            ).join('');
+        }
+
+        function nextKey() {
+            currentKey = getRandomKey();
+            targetKeyEl.textContent = currentKey;
+        }
+
+        function startGame() {
+            score = 0;
+            lives = 3;
+            timeLeft = 30;
+            level = 1;
+            combo = 0;
+            gameRunning = true;
+            keyHistory = [];
+            totalKeys = 0;
+            correctKeys = 0;
+
+            gameArea.style.display = 'block';
+            gameOverEl.classList.remove('show');
+            startBtn.disabled = true;
+            startBtn.textContent = 'GAME RUNNING...';
+
+            updateDisplay();
+            nextKey();
+
+            // Start timer
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateDisplay();
+
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+
+                // Level up every 10 correct keys
+                if (correctKeys > 0 && correctKeys % 10 === 0 && correctKeys / 10 >= level) {
+                    level++;
+                    timeLeft += 10; // Bonus time
+                    showMessage('LEVEL UP! +10s', 'success');
+                }
+            }, 1000);
+        }
+
+        function endGame() {
+            gameRunning = false;
+            clearInterval(timerInterval);
+            
+            gameArea.style.display = 'none';
+            gameOverEl.classList.add('show');
+            finalScoreEl.textContent = score;
+            
+            startBtn.disabled = false;
+            startBtn.textContent = 'START GAME';
+        }
+
+        function handleKeyPress(e) {
+            if (!gameRunning) return;
+
+            const pressedKey = e.key.toUpperCase();
+            
+            // Only accept single character keys
+            if (pressedKey.length !== 1 || !keys.includes(pressedKey)) return;
+
+            totalKeys++;
+
+            if (pressedKey === currentKey) {
+                // Correct key
+                correctKeys++;
+                combo++;
+                
+                // Calculate score based on combo and level
+                const basePoints = 10;
+                const comboBonus = Math.min(combo * 2, 20);
+                const levelBonus = level * 5;
+                const points = basePoints + comboBonus + levelBonus;
+                
+                score += points;
+                showMessage(`+${points} points!`, 'success');
+                addToHistory(pressedKey, true);
+                nextKey();
+            } else {
+                // Wrong key
+                combo = 0;
+                lives--;
+                showMessage('Wrong key! -1 life', 'error');
+                addToHistory(pressedKey, false);
+                
+                if (lives <= 0) {
+                    endGame();
+                }
+            }
+
+            updateDisplay();
+        }
+
+        // Event listener for key presses
+        document.addEventListener('keydown', handleKeyPress);
+
+        // Prevent default for game keys
+        document.addEventListener('keydown', (e) => {
+            if (gameRunning && keys.includes(e.key.toUpperCase())) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
